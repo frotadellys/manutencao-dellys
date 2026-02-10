@@ -318,11 +318,11 @@ function renderTables(dados) {
         tbC.innerHTML = paginados.map(x => `
             <tr>
                 <td>${x.numero}</td><td>${new Date(x.data).toLocaleString('pt-BR')}</td>
-                <td><b>${x.placa}</b></td><td><div class="wrap-text" title="Passe o rato para ver tudo">${x.motorista}</div></td><td>${x.km}</td>
+                <td><b>${x.placa}</b></td><td><div class="wrap-text" title="Passe o mouse para ver tudo">${x.motorista}</div></td><td>${x.km}</td>
                 <td class="serv-${x.tipo.replace(/\s/g, "-")}">${x.tipo}</td>
-                <td><div class="wrap-text" title="Passe o rato para ver tudo">${x.problema}</div></td>
+                <td><div class="wrap-text" title="Passe o mouse para ver tudo">${x.problema}</div></td>
                 <td class="cell-${x.status.replace(/\s/g, "-")}">${x.status}</td>
-                <td><div class="wrap-text" title="Passe o rato para ver tudo">${x.responsavel}</div></td><td><div class="wrap-text" title="Passe o rato para ver tudo">${x.obs}</div></td>
+                <td><div class="wrap-text" title="Passe o mouse para ver tudo">${x.responsavel}</div></td><td><div class="wrap-text" title="Passe o mouse para ver tudo">${x.obs}</div></td>
             </tr>`).join('');
     } else {
         tbO.innerHTML = paginados.map(x => `

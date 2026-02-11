@@ -56,29 +56,27 @@
         -webkit-overflow-scrolling: touch;
     }
     
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1300px; } /* table-layout FIXED para garantir larguras iguais */
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1300px; } 
     
-    /* DEFINIÇÃO DE LARGURAS DAS COLUNAS */
-    th:nth-child(1), td:nth-child(1) { width: 40px; }  /* OS */
-    th:nth-child(2), td:nth-child(2) { width: 110px; } /* DATA */
-    th:nth-child(3), td:nth-child(3) { width: 80px; }  /* PLACA */
-    th:nth-child(4), td:nth-child(4) { width: 120px; } /* MOTORISTA */
-    th:nth-child(5), td:nth-child(5) { width: 70px; }  /* KM */
-    th:nth-child(6), td:nth-child(6) { width: 100px; } /* SERVIÇO */
-    th:nth-child(7), td:nth-child(7) { width: 250px; } /* PROBLEMA */
-    th:nth-child(8), td:nth-child(8) { width: 130px; } /* STATUS */
-    th:nth-child(9), td:nth-child(9) { width: 150px; } /* RESPONSÁVEL */
-    th:nth-child(10), td:nth-child(10) { width: 250px; }/* OBS */
+    th:nth-child(1), td:nth-child(1) { width: 40px; }  
+    th:nth-child(2), td:nth-child(2) { width: 110px; } 
+    th:nth-child(3), td:nth-child(3) { width: 80px; }  
+    th:nth-child(4), td:nth-child(4) { width: 120px; } 
+    th:nth-child(5), td:nth-child(5) { width: 70px; }  
+    th:nth-child(6), td:nth-child(6) { width: 100px; } 
+    th:nth-child(7), td:nth-child(7) { width: 250px; } 
+    th:nth-child(8), td:nth-child(8) { width: 130px; } 
+    th:nth-child(9), td:nth-child(9) { width: 150px; } 
+    th:nth-child(10), td:nth-child(10) { width: 250px; }
 
     th { background: #1e293b; border: 1px solid #0f172a; padding: 10px 12px; font-size: 10px; color: #fff; position: sticky; top: 0; z-index: 10; text-transform: uppercase; white-space: nowrap; }
     td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; text-transform: uppercase; font-size: 10px; vertical-align: middle; overflow: hidden; }
     
-    /* LARGURA E ALTURA PADRONIZADA PARA TEXTOS */
     .wrap-text { 
         white-space: normal !important; 
         text-align: left !important; 
         line-height: 1.25; 
-        max-height: 5em; /* 4 linhas */
+        max-height: 5em; 
         overflow: hidden; 
         word-break: break-word;
         transition: max-height 0.3s ease;
@@ -96,7 +94,6 @@
 
     tbody tr:nth-child(even) { background-color: var(--zebra-bg); }
 
-    /* ESTILOS DE STATUS E SERVIÇO */
     .serv-MECÂNICO { background-color: #fee2e2 !important; color: #991b1b; font-weight: bold; border-left: 6px solid #ef4444 !important; }
     .serv-ELÉTRICO { background-color: #fef3c7 !important; color: #92400e; font-weight: bold; border-left: 6px solid #eab308 !important; }
     .serv-REFRIGERAÇÃO { background-color: #dbeafe !important; color: #1e40af; font-weight: bold; border-left: 6px solid #3b82f6 !important; }
@@ -108,13 +105,11 @@
     .cell-FINALIZADO { background-color: var(--finalizado) !important; color: var(--finalizado-text); font-weight: 900; border-left: 6px solid var(--finalizado-border) !important; }
 
     .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 15px; background: #fff; border-top: 1px solid #cbd5e1; flex-wrap: wrap; }
-    
-    /* INPUTS E TEXTAREAS DO MODO OFICINA */
     .grid-input { width: 100%; border: none; background: transparent; font-size: 10px; padding: 4px; text-transform: uppercase; outline: none; text-align: center; font-weight: bold; box-sizing: border-box; }
     
     .grid-textarea { 
         width: 100%; border: none; background: transparent; font-size: 10px; padding: 4px; text-transform: uppercase; outline: none; resize: none; font-family: inherit; 
-        max-height: 5em; /* 4 linhas iniciais */
+        max-height: 5em; 
         text-align: left; overflow: hidden;
         transition: max-height 0.2s;
         box-sizing: border-box;
@@ -410,6 +405,17 @@ function paginar(acao) {
 function abrirModal() { document.getElementById('modalOS').style.display = 'flex'; }
 function fecharModal() { document.getElementById('modalOS').style.display = 'none'; }
 function showToast() { const t = document.getElementById("toast"); t.style.display="block"; setTimeout(()=>t.style.display="none", 2000); }
+
+// --- FUNÇÃO DE SINCRONISMO AUTOMÁTICO ADICIONADA ---
+setInterval(() => {
+    const busca = document.getElementById("txt-search");
+    const modal = document.getElementById("modalOS");
+    
+    // Só sincroniza se o usuário não estiver digitando na busca e não estiver com o modal aberto
+    if (document.activeElement !== busca && modal.style.display !== "flex") {
+        buscarDados();
+    }
+}, 30000); // Atualiza a cada 30 segundos
 </script>
 </body>
 </html>

@@ -63,7 +63,7 @@
     th:nth-child(3), td:nth-child(3) { width: 80px; }  
     th:nth-child(4), td:nth-child(4) { width: 120px; } 
     th:nth-child(5), td:nth-child(5) { width: 70px; }  
-    th:nth-child(6), td:nth-child(6) { width: 100px; } 
+    th:nth-child(6), td:nth-child(6) { width: 110px; } 
     th:nth-child(7), td:nth-child(7) { width: 250px; } 
     th:nth-child(8), td:nth-child(8) { width: 130px; } 
     th:nth-child(9), td:nth-child(9) { width: 150px; } 
@@ -324,7 +324,15 @@ function renderTables(dados) {
             <tr>
                 <td>${x.numero}</td><td>${new Date(x.data).toLocaleString('pt-BR')}</td>
                 <td><b>${x.placa}</b></td><td><div class="wrap-text">${x.motorista}</div></td><td>${x.km}</td>
-                <td class="serv-${x.tipo.replace(/\s/g, "-")}">${x.tipo}</td>
+                <td class="serv-${x.tipo.replace(/\s/g, "-")}" style="padding:0">
+                    <select class="grid-input" onchange="atualizarCampo(${x.numero}, 'tipo', this.value)">
+                        <option value="MECÂNICO" ${x.tipo==='MECÂNICO'?'selected':''}>MECÂNICO</option>
+                        <option value="ELÉTRICO" ${x.tipo==='ELÉTRICO'?'selected':''}>ELÉTRICO</option>
+                        <option value="REFRIGERAÇÃO" ${x.tipo==='REFRIGERAÇÃO'?'selected':''}>REFRIGERAÇÃO</option>
+                        <option value="LAVAGEM" ${x.tipo==='LAVAGEM'?'selected':''}>LAVAGEM</option>
+                        <option value="OUTROS" ${x.tipo==='OUTROS'?'selected':''}>OUTROS</option>
+                    </select>
+                </td>
                 <td><div class="wrap-text">${x.problema}</div></td>
                 <td class="cell-${x.status.replace(/\s/g, "-")}" style="padding:0">
                     <select class="grid-input" onchange="confirmarStatus(${x.numero}, this, '${x.status}')">
@@ -354,7 +362,7 @@ async function atualizarCampo(num, campo, valor) {
     const item = banco.find(x => x.numero == num);
     if(item) {
         item[campo] = valor.toUpperCase();
-        if(campo === 'status') atualizarInterface(); else filtrarTudoInstantaneo();
+        if(campo === 'status' || campo === 'tipo') atualizarInterface(); else filtrarTudoInstantaneo();
     }
     await fetch(URL_GOOGLE, { method: 'POST', body: JSON.stringify({ action: "update", numero: num, [campo]: valor.toUpperCase() }) });
     showToast();
@@ -403,7 +411,6 @@ function paginar(acao) {
 }
 
 function abrirModal() { 
-    // Limpa os campos antes de abrir para não carregar info anterior
     document.getElementById("placa").value = "";
     document.getElementById("motorista").value = "";
     document.getElementById("km").value = "";
@@ -412,17 +419,12 @@ function abrirModal() {
     document.getElementById('modalOS').style.display = 'flex'; 
 }
 
-function fecharModal() { 
-    document.getElementById('modalOS').style.display = 'none'; 
-}
-
+function fecharModal() { document.getElementById('modalOS').style.display = 'none'; }
 function showToast() { const t = document.getElementById("toast"); t.style.display="block"; setTimeout(()=>t.style.display="none", 2000); }
 
-// --- FUNÇÃO DE SINCRONISMO AUTOMÁTICO ---
 setInterval(() => {
     const busca = document.getElementById("txt-search");
     const modal = document.getElementById("modalOS");
-    
     if (document.activeElement !== busca && modal.style.display !== "flex") {
         buscarDados();
     }

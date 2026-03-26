@@ -22,6 +22,21 @@
     }
 
     body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f1f5f9; color: #333; font-size: 11px; overflow-x: hidden; }
+
+    /* Estilos da Tela de Carregamento Inicial */
+    #initial-loader {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: white;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        z-index: 20000; font-weight: bold; color: var(--header-bg);
+    }
+    .spinner {
+        width: 50px; height: 50px; border: 5px solid #f3f3f3;
+        border-top: 5px solid var(--header-bg); border-radius: 50%;
+        animation: spin 1s linear infinite; margin-bottom: 15px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     header { background: var(--header-bg); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
     .header-title { font-size: 22px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; display: flex; align-items: center; gap: 12px; }
     .truck-icon { width: 32px; height: 32px; fill: currentColor; }
@@ -58,7 +73,6 @@
     
     table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1300px; }
     
-    /* AQUI VOCÊ AJUSTA AS LARGURAS */
     th:nth-child(1), td:nth-child(1) { width: 25px; }  /* OS */
     th:nth-child(2), td:nth-child(2) { width: 85px; } /* DATA/HORA */
     th:nth-child(3), td:nth-child(3) { width: 50px; }  /* PLACA */
@@ -68,7 +82,7 @@
     th:nth-child(7), td:nth-child(7) { width: 250px; } /* PROBLEMA */
     th:nth-child(8), td:nth-child(8) { width: 100px; } /* RESPONSÁVEL */
     th:nth-child(9), td:nth-child(9) { width: 250px; } /* OBSERVAÇÕES */
-    th:nth-child(10), td:nth-child(10) { width: 90px; }/* STATUS (ÚLTIMA COLUNA) */
+    th:nth-child(10), td:nth-child(10) { width: 90px; }/* STATUS */
 
     th { background: #1e293b; border: 1px solid #0f172a; padding: 10px 12px; font-size: 10px; color: #fff; position: sticky; top: 0; z-index: 10; text-transform: uppercase; white-space: nowrap; }
     td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; text-transform: uppercase; font-size: 10px; vertical-align: middle; overflow: hidden; }
@@ -136,6 +150,11 @@
 </style>
 </head>
 <body>
+
+<div id="initial-loader">
+    <div class="spinner"></div>
+    <span>CARREGANDO...</span>
+</div>
 
 <div id="toast">ATUALIZADO!</div>
 
@@ -243,6 +262,7 @@ let filtroStatusAtivo = 'TODOS';
 let telaAtiva = 'consulta';
 let paginaAtual = 1;
 const itensPorPagina = 50;
+let primeiraCarga = true; // Controle da tela de carregamento
 
 window.onload = () => buscarDados();
 
@@ -263,8 +283,20 @@ async function buscarDados() {
             obs: (x.obs || Object.values(x)[9] || "").toString().toUpperCase(),
             conclusao: x.conclusao || Object.values(x)[10] || ""
         }));
+        
         atualizarInterface();
-    } catch (e) { console.error("Erro na carga"); }
+
+        // Oculta a tela de carregamento após a primeira carga de dados com sucesso
+        if (primeiraCarga) {
+            document.getElementById('initial-loader').style.display = 'none';
+            primeiraCarga = false;
+        }
+    } catch (e) { 
+        console.error("Erro na carga");
+        if (primeiraCarga) {
+            document.querySelector('#initial-loader span').innerText = "ERRO AO CONECTAR. TENTE ATUALIZAR A PÁGINA.";
+        }
+    }
 }
 
 function atualizarInterface() {

@@ -23,7 +23,6 @@
 
     body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f1f5f9; color: #333; font-size: 11px; overflow-x: hidden; }
 
-    /* Estilos da Tela de Carregamento Inicial */
     #initial-loader {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: white;
@@ -73,16 +72,16 @@
     
     table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 1300px; }
     
-    th:nth-child(1), td:nth-child(1) { width: 25px; }  /* OS */
-    th:nth-child(2), td:nth-child(2) { width: 85px; } /* DATA/HORA */
-    th:nth-child(3), td:nth-child(3) { width: 50px; }  /* PLACA */
-    th:nth-child(4), td:nth-child(4) { width: 90px; } /* MOTORISTA */
-    th:nth-child(5), td:nth-child(5) { width: 35px; }  /* KM */
-    th:nth-child(6), td:nth-child(6) { width: 90px; } /* SERVIÇO */
-    th:nth-child(7), td:nth-child(7) { width: 250px; } /* PROBLEMA */
-    th:nth-child(8), td:nth-child(8) { width: 100px; } /* RESPONSÁVEL */
-    th:nth-child(9), td:nth-child(9) { width: 250px; } /* OBSERVAÇÕES */
-    th:nth-child(10), td:nth-child(10) { width: 90px; }/* STATUS */
+    th:nth-child(1), td:nth-child(1) { width: 25px; }
+    th:nth-child(2), td:nth-child(2) { width: 85px; }
+    th:nth-child(3), td:nth-child(3) { width: 50px; }
+    th:nth-child(4), td:nth-child(4) { width: 90px; }
+    th:nth-child(5), td:nth-child(5) { width: 35px; }
+    th:nth-child(6), td:nth-child(6) { width: 90px; }
+    th:nth-child(7), td:nth-child(7) { width: 250px; }
+    th:nth-child(8), td:nth-child(8) { width: 100px; }
+    th:nth-child(9), td:nth-child(9) { width: 250px; }
+    th:nth-child(10), td:nth-child(10) { width: 90px; }
 
     th { background: #1e293b; border: 1px solid #0f172a; padding: 10px 12px; font-size: 10px; color: #fff; position: sticky; top: 0; z-index: 10; text-transform: uppercase; white-space: nowrap; }
     td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; text-transform: uppercase; font-size: 10px; vertical-align: middle; overflow: hidden; }
@@ -239,7 +238,8 @@
 <div id="modalOS" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999;">
     <div class="modal-box" style="background: white; padding: 25px; border-radius: 8px; width: 450px;">
         <h3 style="margin-top:0; border-bottom: 2px solid var(--btn-add-bg); padding-bottom: 8px; color: var(--btn-add-bg)">Nova Ordem de Serviço</h3>
-        <input id="placa" placeholder="PLACA" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase;">
+        <input id="placa" placeholder="PLACA (EX: ABC1234)" maxlength="7" oninput="aplicarMascaraPlaca(this)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase; font-weight: bold;">
+        
         <input id="motorista" placeholder="MOTORISTA" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase;">
         <input id="km" type="number" placeholder="KM ATUAL" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1;">
         <select id="tipoServico" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; cursor:pointer;">
@@ -262,15 +262,24 @@ let filtroStatusAtivo = 'TODOS';
 let telaAtiva = 'consulta';
 let paginaAtual = 1;
 const itensPorPagina = 50;
-let primeiraCarga = true; // Controle da tela de carregamento
+let primeiraCarga = true;
+let estaAtualizando = false;
+let linhasBloqueadas = {};
 
 window.onload = () => buscarDados();
 
+// FUNÇÃO DE MÁSCARA PARA PLACA (APENAS LETRAS E NÚMEROS)
+function aplicarMascaraPlaca(input) {
+    input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").substring(0, 7);
+}
+
 async function buscarDados() {
+    if (estaAtualizando) return;
     try {
         const res = await fetch(URL_GOOGLE);
         const json = await res.json();
-        banco = json.map(x => ({
+        const agora = Date.now();
+        const novosDados = json.map(x => ({
             numero: x.numero || Object.values(x)[0],
             data: x.data || Object.values(x)[1],
             placa: (x.placa || Object.values(x)[2] || "").toString().toUpperCase(),
@@ -283,23 +292,22 @@ async function buscarDados() {
             obs: (x.obs || Object.values(x)[9] || "").toString().toUpperCase(),
             conclusao: x.conclusao || Object.values(x)[10] || ""
         }));
-        
+        banco = novosDados.map(novoItem => {
+            const itemLocal = banco.find(b => b.numero == novoItem.numero);
+            const timestampBloqueio = linhasBloqueadas[novoItem.numero];
+            if (itemLocal && timestampBloqueio && (agora - timestampBloqueio < 15000)) return itemLocal;
+            return novoItem;
+        });
         atualizarInterface();
-
-        // Oculta a tela de carregamento após a primeira carga de dados com sucesso
         if (primeiraCarga) {
             document.getElementById('initial-loader').style.display = 'none';
             primeiraCarga = false;
         }
-    } catch (e) { 
-        console.error("Erro na carga");
-        if (primeiraCarga) {
-            document.querySelector('#initial-loader span').innerText = "ERRO AO CONECTAR. TENTE ATUALIZAR A PÁGINA.";
-        }
-    }
+    } catch (e) { console.error("Erro na carga"); }
 }
 
 function atualizarInterface() {
+    paginaAtual = 1;
     const dadosPeriodo = getDadosPorPeriodo();
     const c = { 'ABERTO':0, 'EM ANDAMENTO':0, 'AGUARDANDO PEÇA':0, 'FINALIZADO':0 };
     dadosPeriodo.forEach(x => { if(c.hasOwnProperty(x.status)) c[x.status]++; });
@@ -308,7 +316,6 @@ function atualizarInterface() {
     document.getElementById('countAndamento').innerText = c['EM ANDAMENTO'];
     document.getElementById('countAguardando').innerText = c['AGUARDANDO PEÇA'];
     document.getElementById('countFinalizado').innerText = c['FINALIZADO'];
-    
     document.body.classList.toggle('modo-oficina-active', telaAtiva === 'editar');
     filtrarTudoInstantaneo();
 }
@@ -337,10 +344,10 @@ function renderTables(dados) {
     const isOficina = (telaAtiva === 'editar');
     const tbC = document.getElementById("tbodyConsulta");
     const tbO = document.getElementById("tbodyOficina");
-
     const totalP = isOficina ? 1 : (Math.ceil(dados.length / itensPorPagina) || 1);
     const paginados = isOficina ? dados : dados.slice((paginaAtual-1)*itensPorPagina, paginaAtual*itensPorPagina);
     document.getElementById("pageInfo").innerText = `PÁGINA ${paginaAtual} DE ${totalP}`;
+    
     tbC.innerHTML = ""; tbO.innerHTML = "";
 
     if (telaAtiva === 'consulta') {
@@ -356,31 +363,35 @@ function renderTables(dados) {
                 <td class="cell-${x.status.replace(/\s/g, "-")}" ${balao}>${x.status}</td>
             </tr>`}).join('');
     } else {
-        tbO.innerHTML = paginados.map(x => `
-            <tr>
-                <td>${x.numero}</td><td>${new Date(x.data).toLocaleString('pt-BR')}</td>
-                <td><b>${x.placa}</b></td><td><div class="wrap-text">${x.motorista}</div></td><td>${x.km}</td>
-                <td class="serv-${x.tipo.replace(/\s/g, "-")}" style="padding:0">
-                    <select class="grid-input" onchange="atualizarCampo(${x.numero}, 'tipo', this.value)">
-                        <option value="MECÂNICO" ${x.tipo==='MECÂNICO'?'selected':''}>MECÂNICO</option>
-                        <option value="ELÉTRICO" ${x.tipo==='ELÉTRICO'?'selected':''}>ELÉTRICO</option>
-                        <option value="REFRIGERAÇÃO" ${x.tipo==='REFRIGERAÇÃO'?'selected':''}>REFRIGERAÇÃO</option>
-                        <option value="LAVAGEM" ${x.tipo==='LAVAGEM'?'selected':''}>LAVAGEM</option>
-                        <option value="OUTROS" ${x.tipo==='OUTROS'?'selected':''}>OUTROS</option>
-                    </select>
-                </td>
-                <td><div class="wrap-text">${x.problema}</div></td>
-                <td style="padding:0"><textarea class="grid-textarea" onchange="atualizarCampo(${x.numero}, 'responsavel', this.value)">${x.responsavel}</textarea></td>
-                <td style="padding:0"><textarea class="grid-textarea" onchange="atualizarCampo(${x.numero}, 'obs', this.value)">${x.obs}</textarea></td>
-                <td class="cell-${x.status.replace(/\s/g, "-")}" style="padding:0">
-                    <select class="grid-input" onchange="confirmarStatus(this, ${x.numero}, '${x.status}')">
-                        <option value="ABERTO" ${x.status==='ABERTO'?'selected':''}>ABERTO</option>
-                        <option value="EM ANDAMENTO" ${x.status==='EM ANDAMENTO'?'selected':''}>EM ANDAMENTO</option>
-                        <option value="AGUARDANDO PEÇA" ${x.status==='AGUARDANDO PEÇA'?'selected':''}>AGUARDANDO PEÇA</option>
-                        <option value="FINALIZADO" ${x.status==='FINALIZADO'?'selected':''}>FINALIZADO</option>
-                    </select>
-                </td>
-            </tr>`).join('');
+        if (dados.length === 0) {
+            tbO.innerHTML = `<tr><td colspan="10" style="padding: 80px; font-size: 16px; font-weight: bold; color: #64748b; background: #fff; text-align: center;">✅ NENHUMA ORDEM DE SERVIÇO PENDENTE NO MOMENTO. TUDO EM DIA!</td></tr>`;
+        } else {
+            tbO.innerHTML = paginados.map(x => `
+                <tr>
+                    <td>${x.numero}</td><td>${new Date(x.data).toLocaleString('pt-BR')}</td>
+                    <td><b>${x.placa}</b></td><td><div class="wrap-text">${x.motorista}</div></td><td>${x.km}</td>
+                    <td class="serv-${x.tipo.replace(/\s/g, "-")}" style="padding:0">
+                        <select class="grid-input" onchange="atualizarCampo(${x.numero}, 'tipo', this.value)">
+                            <option value="MECÂNICO" ${x.tipo==='MECÂNICO'?'selected':''}>MECÂNICO</option>
+                            <option value="ELÉTRICO" ${x.tipo==='ELÉTRICO'?'selected':''}>ELÉTRICO</option>
+                            <option value="REFRIGERAÇÃO" ${x.tipo==='REFRIGERAÇÃO'?'selected':''}>REFRIGERAÇÃO</option>
+                            <option value="LAVAGEM" ${x.tipo==='LAVAGEM'?'selected':''}>LAVAGEM</option>
+                            <option value="OUTROS" ${x.tipo==='OUTROS'?'selected':''}>OUTROS</option>
+                        </select>
+                    </td>
+                    <td><div class="wrap-text">${x.problema}</div></td>
+                    <td style="padding:0"><textarea class="grid-textarea" onchange="atualizarCampo(${x.numero}, 'responsavel', this.value)">${x.responsavel}</textarea></td>
+                    <td style="padding:0"><textarea class="grid-textarea" onchange="atualizarCampo(${x.numero}, 'obs', this.value)">${x.obs}</textarea></td>
+                    <td class="cell-${x.status.replace(/\s/g, "-")}" style="padding:0">
+                        <select class="grid-input" onchange="confirmarStatus(this, ${x.numero}, '${x.status}')">
+                            <option value="ABERTO" ${x.status==='ABERTO'?'selected':''}>ABERTO</option>
+                            <option value="EM ANDAMENTO" ${x.status==='EM ANDAMENTO'?'selected':''}>EM ANDAMENTO</option>
+                            <option value="AGUARDANDO PEÇA" ${x.status==='AGUARDANDO PEÇA'?'selected':''}>AGUARDANDO PEÇA</option>
+                            <option value="FINALIZADO" ${x.status==='FINALIZADO'?'selected':''}>FINALIZADO</option>
+                        </select>
+                    </td>
+                </tr>`).join('');
+        }
     }
 }
 
@@ -398,19 +409,39 @@ function confirmarStatus(el, num, statusAnterior) {
 async function atualizarCampo(num, campo, valor) {
     const item = banco.find(x => x.numero == num);
     if(item) {
+        estaAtualizando = true; 
         item[campo] = valor.toUpperCase();
-        if(campo === 'status' || campo === 'tipo') atualizarInterface(); else filtrarTudoInstantaneo();
+        linhasBloqueadas[num] = Date.now();
+        if(campo === 'status' || campo === 'tipo') { atualizarInterface(); }
     }
-    await fetch(URL_GOOGLE, { method: 'POST', body: JSON.stringify({ action: "update", numero: num, [campo]: valor.toUpperCase() }) });
-    showToast();
+    try {
+        await fetch(URL_GOOGLE, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "update", numero: num, [campo]: valor.toUpperCase() }) 
+        });
+        showToast(num);
+    } catch (e) { console.error("Erro na sincronização"); }
+    finally { estaAtualizando = false; }
 }
 
 async function salvar() {
     const p = document.getElementById("placa").value.trim();
     const m = document.getElementById("motorista").value.trim();
-    if(!p || !m) { alert("PREENCHA PLACA E MOTORISTA!"); return; }
+    
+    // VALIDAÇÃO: EXIGE EXATAMENTE 7 CARACTERES PARA A PLACA
+    if(p.length !== 7) { 
+        alert("PLACA INVÁLIDA! USE O FORMATO COM 7 CARACTERES (EX: ABC1234 OU ABC1D23)."); 
+        return; 
+    }
+    if(!m) { 
+        alert("PREENCHA O NOME DO MOTORISTA!"); 
+        return; 
+    }
+
     fecharModal();
+    estaAtualizando = true;
     await fetch(URL_GOOGLE, { method: 'POST', body: JSON.stringify({ data: new Date().toISOString(), placa: p.toUpperCase(), motorista: m.toUpperCase(), km: document.getElementById("km").value, tipo: document.getElementById("tipoServico").value, problema: document.getElementById("problema").value.toUpperCase(), status: "ABERTO", responsavel: "", obs: "", conclusao: "" }) });
+    estaAtualizando = false;
     buscarDados();
 }
 
@@ -454,15 +485,22 @@ function abrirModal() {
     document.getElementById("problema").value = "";
     document.getElementById("tipoServico").selectedIndex = 0;
     document.getElementById('modalOS').style.display = 'flex'; 
+    setTimeout(() => { document.getElementById("placa").focus(); }, 100);
 }
 
 function fecharModal() { document.getElementById('modalOS').style.display = 'none'; }
-function showToast() { const t = document.getElementById("toast"); t.style.display="block"; setTimeout(()=>t.style.display="none", 2000); }
+
+function showToast(numeroOS) { 
+    const t = document.getElementById("toast"); 
+    t.innerText = `OS ${numeroOS} ATUALIZADA!`;
+    t.style.display="block"; 
+    setTimeout(()=>t.style.display="none", 2000); 
+}
 
 setInterval(() => {
     const busca = document.getElementById("txt-search");
     const modal = document.getElementById("modalOS");
-    if (document.activeElement !== busca && modal.style.display !== "flex") {
+    if (document.activeElement !== busca && modal.style.display !== "flex" && !estaAtualizando) {
         buscarDados();
     }
 }, 30000); 

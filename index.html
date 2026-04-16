@@ -238,7 +238,9 @@
 <div id="modalOS" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999;">
     <div class="modal-box" style="background: white; padding: 25px; border-radius: 8px; width: 450px;">
         <h3 style="margin-top:0; border-bottom: 2px solid var(--btn-add-bg); padding-bottom: 8px; color: var(--btn-add-bg)">Nova Ordem de Serviço</h3>
-        <input id="placa" placeholder="PLACA (EX: ABC1234)" maxlength="7" oninput="aplicarMascaraPlaca(this)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase; font-weight: bold;">
+        
+        <input id="placa" list="listaPlacas" placeholder="PLACA (EX: ABC1234)" maxlength="7" oninput="aplicarMascaraPlaca(this)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase; font-weight: bold;">
+        <datalist id="listaPlacas"></datalist>
         
         <input id="motorista" placeholder="MOTORISTA" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase;">
         <input id="km" type="number" placeholder="KM ATUAL" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1;">
@@ -268,9 +270,25 @@ let linhasBloqueadas = {};
 
 window.onload = () => buscarDados();
 
-// FUNÇÃO DE MÁSCARA PARA PLACA (APENAS LETRAS E NÚMEROS)
 function aplicarMascaraPlaca(input) {
     input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").substring(0, 7);
+    // Chama a atualização de sugestões a cada dígito
+    atualizarSugestoesPlacas();
+}
+
+// FUNÇÃO ATUALIZADA: Agora verifica se há pelo menos 2 caracteres antes de mostrar as sugestões
+function atualizarSugestoesPlacas() {
+    const inputPlaca = document.getElementById('placa');
+    const lista = document.getElementById('listaPlacas');
+    
+    // Se tiver menos de 3 caracteres, limpa a lista para não mostrar sugestões
+    if (inputPlaca.value.length < 2) {
+        lista.innerHTML = "";
+        return;
+    }
+
+    const placasUnicas = [...new Set(banco.map(x => x.placa))].filter(p => p).sort();
+    lista.innerHTML = placasUnicas.map(p => `<option value="${p}">`).join('');
 }
 
 async function buscarDados() {
@@ -427,16 +445,8 @@ async function atualizarCampo(num, campo, valor) {
 async function salvar() {
     const p = document.getElementById("placa").value.trim();
     const m = document.getElementById("motorista").value.trim();
-    
-    // VALIDAÇÃO: EXIGE EXATAMENTE 7 CARACTERES PARA A PLACA
-    if(p.length !== 7) { 
-        alert("PLACA INVÁLIDA! USE O FORMATO COM 7 CARACTERES (EX: ABC1234 OU ABC1D23)."); 
-        return; 
-    }
-    if(!m) { 
-        alert("PREENCHA O NOME DO MOTORISTA!"); 
-        return; 
-    }
+    if(p.length !== 7) { alert("PLACA INVÁLIDA! USE O FORMATO COM 7 CARACTERES."); return; }
+    if(!m) { alert("PREENCHA O NOME DO MOTORISTA!"); return; }
 
     fecharModal();
     estaAtualizando = true;
@@ -484,6 +494,10 @@ function abrirModal() {
     document.getElementById("km").value = "";
     document.getElementById("problema").value = "";
     document.getElementById("tipoServico").selectedIndex = 0;
+    
+    // Agora a lista começa vazia ao abrir o modal
+    document.getElementById('listaPlacas').innerHTML = "";
+
     document.getElementById('modalOS').style.display = 'flex'; 
     setTimeout(() => { document.getElementById("placa").focus(); }, 100);
 }

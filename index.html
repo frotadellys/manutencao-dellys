@@ -236,7 +236,7 @@
 </div>
 
 <div id="modalOS" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999;">
-    <div class="modal-box" style="background: white; padding: 25px; border-radius: 8px; width: 450px;">
+    <div class="modal-box" style="background: white; padding: 25px; border-radius: 8px; width: 450px; max-height: 95vh; overflow-y: auto; box-sizing: border-box;">
         <h3 style="margin-top:0; border-bottom: 2px solid var(--btn-add-bg); padding-bottom: 8px; color: var(--btn-add-bg)">Nova Ordem de Serviço</h3>
         
         <input id="placa" list="listaPlacas" placeholder="PLACA (EX: ABC1234)" maxlength="7" oninput="aplicarMascaraPlaca(this)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase; font-weight: bold;">
@@ -244,14 +244,11 @@
         
         <input id="motorista" placeholder="MOTORISTA" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase;">
         <input id="km" type="number" placeholder="KM ATUAL" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1;">
-        <select id="tipoServico" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; cursor:pointer;">
-            <option value="MECÂNICO">MECÂNICO</option>
-            <option value="ELÉTRICO">ELÉTRICO</option>
-            <option value="REFRIGERAÇÃO">REFRIGERAÇÃO</option>
-            <option value="LAVAGEM">LAVAGEM</option>
-            <option value="OUTROS">OUTROS</option>
-        </select>
-        <textarea id="problema" placeholder="DESCREVA O PROBLEMA..." rows="3" style="width:100%; padding:10px; margin:8px 0; border:1px solid #cbd5e1; text-transform:uppercase;"></textarea>
+        
+        <div id="containerServicos" style="margin-top: 15px; max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
+        
+        <button type="button" class="btn-fx" onclick="adicionarLinhaServico()" style="background: #3b82f6; color: white; width: 100%; padding: 8px; margin: 10px 0; font-size: 10px;">+ ADICIONAR OUTRO SERVIÇO / PROBLEMA</button>
+        
         <button class="btn-fx btn-add" style="width:100%; padding: 12px; margin-top:10px" onclick="salvar()">GRAVAR OS</button>
         <button class="btn-fx" style="width:100%; margin-top:10px; border:none; background:transparent; cursor:pointer;" onclick="fecharModal()">CANCELAR</button>
     </div>
@@ -272,16 +269,13 @@ window.onload = () => buscarDados();
 
 function aplicarMascaraPlaca(input) {
     input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").substring(0, 7);
-    // Chama a atualização de sugestões a cada dígito
     atualizarSugestoesPlacas();
 }
 
-// FUNÇÃO ATUALIZADA: Agora verifica se há pelo menos 2 caracteres antes de mostrar as sugestões
 function atualizarSugestoesPlacas() {
     const inputPlaca = document.getElementById('placa');
     const lista = document.getElementById('listaPlacas');
     
-    // Se tiver menos de 3 caracteres, limpa a lista para não mostrar sugestões
     if (inputPlaca.value.length < 2) {
         lista.innerHTML = "";
         return;
@@ -317,11 +311,14 @@ async function buscarDados() {
             return novoItem;
         });
         atualizarInterface();
+    } catch (e) { 
+        console.error("Erro na carga"); 
+    } finally {
         if (primeiraCarga) {
             document.getElementById('initial-loader').style.display = 'none';
             primeiraCarga = false;
         }
-    } catch (e) { console.error("Erro na carga"); }
+    }
 }
 
 function atualizarInterface() {
@@ -442,15 +439,79 @@ async function atualizarCampo(num, campo, valor) {
     finally { estaAtualizando = false; }
 }
 
+function adicionarLinhaServico() {
+    const container = document.getElementById('containerServicos');
+    const div = document.createElement('div');
+    div.className = 'linha-servico-item';
+    div.style.border = "1px dashed #cbd5e1";
+    div.style.padding = "8px";
+    div.style.borderRadius = "4px";
+    div.style.marginBottom = "10px";
+    div.style.background = "#f8fafc";
+    div.style.display = "flex";
+    div.style.gap = "8px";
+    div.style.alignItems = "flex-start";
+    
+    div.innerHTML = `
+        <div style="flex: 1;">
+            <select class="tipo-servico-item" style="width:100%; padding:8px; margin-bottom:5px; border:1px solid #cbd5e1; cursor:pointer; font-size:10px; font-weight: bold;">
+                <option value="MECÂNICO">MECÂNICO</option>
+                <option value="ELÉTRICO">ELÉTRICO</option>
+                <option value="REFRIGERAÇÃO">REFRIGERAÇÃO</option>
+                <option value="LAVAGEM">LAVAGEM</option>
+                <option value="OUTROS" selected>OUTROS</option>
+            </select>
+            <textarea class="problema-item" placeholder="DESCREVA O PROBLEMA..." rows="2" style="width:100%; padding:8px; border:1px solid #cbd5e1; text-transform:uppercase; font-size:10px; font-family: inherit; box-sizing: border-box;"></textarea>
+        </div>
+        <button type="button" onclick="this.parentElement.remove()" style="background:#dc2626; color:white; border:none; padding:6px 10px; cursor:pointer; border-radius:4px; font-weight:bold; font-size:10px;">X</button>
+    `;
+    container.appendChild(div);
+}
+
 async function salvar() {
     const p = document.getElementById("placa").value.trim();
     const m = document.getElementById("motorista").value.trim();
+    const kmVal = document.getElementById("km").value;
+    
     if(p.length !== 7) { alert("PLACA INVÁLIDA! USE O FORMATO COM 7 CARACTERES."); return; }
     if(!m) { alert("PREENCHA O NOME DO MOTORISTA!"); return; }
 
+    const itens = document.querySelectorAll('.linha-servico-item');
+    if (itens.length === 0) { alert("ADICIONE PELO MENOS UM SERVIÇO/PROBLEMA!"); return; }
+
+    for (let item of itens) {
+        const prob = item.querySelector('.problema-item').value.trim();
+        if (!prob) { alert("POR FAVOR, PREENCHA A DESCRIÇÃO DO PROBLEMA EM TODOS OS SERVIÇOS QUE ADICIONOU."); return; }
+    }
+
     fecharModal();
     estaAtualizando = true;
-    await fetch(URL_GOOGLE, { method: 'POST', body: JSON.stringify({ data: new Date().toISOString(), placa: p.toUpperCase(), motorista: m.toUpperCase(), km: document.getElementById("km").value, tipo: document.getElementById("tipoServico").value, problema: document.getElementById("problema").value.toUpperCase(), status: "ABERTO", responsavel: "", obs: "", conclusao: "" }) });
+
+    for (let item of itens) {
+        const tipo = item.querySelector('.tipo-servico-item').value;
+        const prob = item.querySelector('.problema-item').value.trim().toUpperCase();
+
+        try {
+            await fetch(URL_GOOGLE, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    data: new Date().toISOString(), 
+                    placa: p.toUpperCase(), 
+                    motorista: m.toUpperCase(), 
+                    km: kmVal, 
+                    tipo: tipo, 
+                    problema: prob, 
+                    status: "ABERTO", 
+                    responsavel: "", 
+                    obs: "", 
+                    conclusao: "" 
+                }) 
+            });
+        } catch (e) {
+            console.error("Falha ao sincronizar um dos chamados da lista:", e);
+        }
+    }
+
     estaAtualizando = false;
     buscarDados();
 }
@@ -492,12 +553,11 @@ function abrirModal() {
     document.getElementById("placa").value = "";
     document.getElementById("motorista").value = "";
     document.getElementById("km").value = "";
-    document.getElementById("problema").value = "";
-    document.getElementById("tipoServico").selectedIndex = 0;
     
-    // Agora a lista começa vazia ao abrir o modal
-    document.getElementById('listaPlacas').innerHTML = "";
+    document.getElementById('containerServicos').innerHTML = "";
+    adicionarLinhaServico();
 
+    document.getElementById('listaPlacas').innerHTML = "";
     document.getElementById('modalOS').style.display = 'flex'; 
     setTimeout(() => { document.getElementById("placa").focus(); }, 100);
 }
@@ -507,8 +567,8 @@ function fecharModal() { document.getElementById('modalOS').style.display = 'non
 function showToast(numeroOS) { 
     const t = document.getElementById("toast"); 
     t.innerText = `OS ${numeroOS} ATUALIZADA!`;
-    t.style.display="block"; 
-    setTimeout(()=>t.style.display="none", 2000); 
+    t.style.display = "block"; 
+    setTimeout(() => t.style.display = "none", 2000); 
 }
 
 setInterval(() => {
